@@ -1,8 +1,8 @@
 import torch
 import numpy as np
 from torch.autograd import Variable
-from layers import (ConvLayer, DeconvLayer, Flatten, GlobalAveragePooling)
-from positional import PositionTrasnformer
+from src.layers import (ConvLayer, DeconvLayer, Flatten, GlobalAveragePooling)
+from src.positional import PositionTrasnformer
 
 
 class GeneratorGAWNN(torch.nn.Module):
