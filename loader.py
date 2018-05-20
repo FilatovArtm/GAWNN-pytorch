@@ -15,6 +15,10 @@ from torchvision.transforms import ToTensor, Resize, Compose
 import torchvision
 
 class DeepFashionDataset(Dataset):
+    '''
+    indicies не порядковые просто номера, прошедшие фильтрацию, а словарь: ключ - номер человека, значения - 
+    лист из а) пусть к картинке б) координаты stickmena
+    '''
     def __init__(self, index_path, 
                  train=True, shuffle=False, transform=None,
                  return_keys = ["imgs", "joints", "norm_imgs", "norm_joints"]):
@@ -27,7 +31,13 @@ class DeepFashionDataset(Dataset):
         self.shuffle_ = shuffle
         self.return_keys = return_keys
         self.jo = self.index["joint_order"]
-        self.indices = np.array([i for i in range(len(self.index["train"])) if self._filter(i)])
+        self.indices = defaultdict(list)
+        for i in range(len(self.index["train"])):
+            if self._filter(i):
+                man_idx = index['imgs'][i].split('/')[1].split('_')[0]
+                self.indices[man_idx].append([index['imgs'][i], self.index["joints"][i]])
+                
+        #self.indices = np.array([i for i in range(len(self.index["train"])) if self._filter(i)])
         self.shuffle()
         self.transform = transform
         
@@ -128,9 +138,25 @@ class DeepFashionDataset(Dataset):
 
     def __getitem__(self, i):
         
-        idx = self.indices[i]
-        rel_img_path = self.index["imgs"][idx]
-        path = os.path.join(self.basepath, rel_img_path)
+        idx = list(self.indices.keys())[i]
+        imgs = list()
+        stickmans = list()
+        for num_man, man in enumerate(self.indices[idx]):
+            if num_man == 2:
+                break
+            img = self.load_img(man[0])
+            width, height = img.shape[0], img.shape[1]
+            joints_to_img_size = np.array([[width, height]])
+            joint_coord = man[1] * joints_to_img_size
+            stickman = self.make_joint_img((width, height, 3), self.jo, joint_coord)
+            if self.transform:
+                img = self.transform(PIL.Image.fromarray(img))
+                stickman = self.transform(PIL.Image.fromarray(stickman))
+            imgs.append(img)
+            stickmans.append(stickman)
+        '''   
+        #rel_img_path = self.index["imgs"][idx]
+        #path = os.path.join(self.basepath, rel_img_path)
         img = self.load_img(path)
         
         width, height = img.shape[0], img.shape[1]
@@ -142,8 +168,8 @@ class DeepFashionDataset(Dataset):
         if self.transform:
             img = self.transform(PIL.Image.fromarray(img))
             stickman = self.transform(PIL.Image.fromarray(stickman))
-            
-        return img, stickman
+        '''    
+        return torch.stack(imgs, 0), torch.stack(stickmans, 0)
 
 
 def get_train_loader(index_path, batch_size=3, random_seed=42, shuffle=True, resize_size=None):
@@ -168,22 +194,3 @@ if __name__ == "__main__":
 	for i, (x, y) in enumerate(l):
 	    if i == 0:
 	        break
-	plt.figure(figsize=(15,15))
-	plt.subplot(2,batch_size,1)
-	plt.imshow(torchvision.transforms.ToPILImage()(x[0]))
-	plt.subplot(2,batch_size,2)
-	plt.imshow(torchvision.transforms.ToPILImage()(y[0]))
-	plt.subplot(2,batch_size,3)
-	plt.imshow(torchvision.transforms.ToPILImage()(x[1]))
-	plt.subplot(2,batch_size,4)
-	plt.imshow(torchvision.transforms.ToPILImage()(y[1]))
-	plt.subplot(2,batch_size,5)
-	plt.imshow(torchvision.transforms.ToPILImage()(x[2]))
-	plt.subplot(2,batch_size,6)
-	plt.imshow(torchvision.transforms.ToPILImage()(y[2]))
-	plt.subplot(2,batch_size,7)
-	plt.imshow(torchvision.transforms.ToPILImage()(x[3]))
-	plt.subplot(2,batch_size,8)
-	plt.imshow(torchvision.transforms.ToPILImage()(y[3]))
-	plt.tight_layout()
-	plt.show()
