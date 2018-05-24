@@ -8,6 +8,7 @@ import math
 
 import matplotlib.pyplot as plt
 #%matplotlib inline
+from collections import defaultdict
 
 from torch.utils.data import Dataset, DataLoader
 from torchvision.transforms import ToTensor, Resize, Compose
@@ -34,8 +35,8 @@ class DeepFashionDataset(Dataset):
         self.indices = defaultdict(list)
         for i in range(len(self.index["train"])):
             if self._filter(i):
-                man_idx = index['imgs'][i].split('/')[1].split('_')[0]
-                self.indices[man_idx].append([index['imgs'][i], self.index["joints"][i]])
+                man_idx = self.index['imgs'][i].split('/')[1].split('_')[0]
+                self.indices[man_idx].append([self.index['imgs'][i], self.index["joints"][i]])
                 
         #self.indices = np.array([i for i in range(len(self.index["train"])) if self._filter(i)])
         self.shuffle()
